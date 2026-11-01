@@ -39,7 +39,7 @@ VPS 的 Memory Share Vault 和移动端使用社区插件 **OneDrive Sync**（�
 PYTHON -m memory_share --state STATE export
 ```
 
-生成文件名使用 `<标题短名>--<完整_fact_id>.md`，Markdown 标题使用人类可读的记忆标题；YAML 属性保留 `title`、完整 `fact_id`、`revision`、`scope`、`certainty`、`status`、`pending`、创建者、最近修改者及时间。正文“修改记录”表按 revision 列出每次已接受的 Agent、设备、操作和 UTC 时间。升级前的记忆会把不可追溯的初始来源标为未知；新提交由服务端记录可信接收时间。文件名便于浏览，完整 ID 便于 Agent 精确定位。修改记忆标题后，导出器会在旧文件仍与导出清单一致时安全重命名；手动改动过的旧文件会保留并报告。重复导出相同内容不重写，减少版本噪声。
+生成文件名使用 `<标题短名>--<完整_fact_id>.md`，Markdown 标题使用人类可读的记忆标题；YAML 属性保留 `title`、完整 `fact_id`、`revision`、`scope`、`certainty`、`status`、`pending`、创建者、最近修改者及时间。正文“修改记录”表按 revision 列出每次已接受的 Agent、设备、操作和 UTC 时间。升级时先从服务端成功事件日志回填旧记忆的历史；日志缺失的字段标为未知。新提交由服务端记录接收时间。文件名便于浏览，完整 ID 便于 Agent 精确定位。修改记忆标题后，导出器会在旧文件仍与导出清单一致时安全重命名；手动改动过的旧文件会保留并报告。重复导出相同内容不重写，减少版本噪声。
 
 生成文件是只读视图。**直接改 Markdown 不会提交主库**。修改前先用 `memory_get` 获取当前 revision，再由 Agent 调用 `memory_update`；新增用 `memory_store`，撤销用 `memory_retract`。`certainty=candidate` 表示待核实，用户确认或有可复核证据后才设为 `confirmed`；`pending` 指客户端事件尚未获得服务端确认，不代表用户审批状态。同步后导出视图会更新。
 

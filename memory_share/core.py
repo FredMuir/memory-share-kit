@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+from collections import defaultdict
 import hashlib
 import json
 import os
@@ -152,6 +153,51 @@ class Authority:
                 CREATE TABLE IF NOT EXISTS devices(id TEXT PRIMARY KEY, token_hash TEXT NOT NULL UNIQUE);
             """)
             db.execute("INSERT OR IGNORE INTO meta VALUES('epoch', ?)", (uid(),))
+            self._backfill_audit(db)
+
+    @staticmethod
+    def _backfill_audit(db):
+        """Rebuild audit fields for legacy facts from their accepted event receipts."""
+        histories = defaultdict(list)
+        for row in db.execute("SELECT event,response FROM events ORDER BY rowid"):
+            event = json.loads(row["event"])
+            response = json.loads(row["response"])
+            fact = response.get("fact")
+            if response.get("status") != "accepted" or not fact:
+                continue
+            histories[fact["id"]].append({
+                "revision": event["event_id"], "action": event["operation"],
+                "agent": event.get("agent", "") or "unknown",
+                "device_id": event.get("device_id", "unknown"),
+                "recorded_at": fact.get("updated_at"),
+                "time_known": isinstance(fact.get("updated_at"), (int, float)),
+            })
+        for row in db.execute("SELECT id,data FROM facts").fetchall():
+            fact = json.loads(row["data"])
+            if "history" in fact:
+                continue
+            history = histories.get(row["id"], [])
+            if history:
+                first, latest = history[0], history[-1]
+                fact.update({
+                    "created_at": first["recorded_at"],
+                    "created_by_agent": first["agent"],
+                    "created_by_device_id": first["device_id"],
+                    "updated_at": latest["recorded_at"],
+                    "updated_by_agent": latest["agent"],
+                    "updated_by_device_id": latest["device_id"],
+                    "history": history,
+                })
+            else:
+                fact.update({
+                    "created_at": None,
+                    "created_by_agent": "unknown (before audit tracking)",
+                    "created_by_device_id": "unknown",
+                    "updated_by_agent": fact.get("agent", "unknown"),
+                    "updated_by_device_id": fact.get("device_id", "unknown"),
+                    "history": [],
+                })
+            db.execute("UPDATE facts SET data=? WHERE id=?", (dumps(fact), row["id"]))
 
     def add_device(self, device, token):
         identifier(device)
