@@ -24,7 +24,7 @@ fi
 "$python_cmd" -m venv "$venv"
 python_bin="$venv/bin/python"
 "$python_bin" -m pip install -r "$kit_dir/requirements.lock"
-"$python_bin" -m pip install --no-deps "$kit_dir/dist/memory_share_kit-0.1.1-py3-none-any.whl"
+"$python_bin" -m pip install --no-deps "$kit_dir/dist/memory_share_kit-0.1.2-py3-none-any.whl"
 if [[ ! -f "$install_root/client.json" ]]; then
   "$python_bin" -m memory_share --state "$install_root" init --device "$device" --vault "$vault"
 else

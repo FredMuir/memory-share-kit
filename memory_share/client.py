@@ -77,11 +77,19 @@ class Client:
             valid = (e["operation"] == "create" and current is None) or (
                 current is not None and current["revision"] == e["base_revision"])
             if valid:
-                facts[e["fact_id"]] = {"id": e["fact_id"], "revision": e["event_id"], "scope": e["scope"],
+                fact = {**(current or {}), "id": e["fact_id"], "revision": e["event_id"], "scope": e["scope"],
                     "title": e["title"], "content": e["content"], "certainty": e["certainty"],
                     "status": "retracted" if e["operation"] == "retract" else "active",
                     "source": e.get("source", ""), "agent": e.get("agent", ""),
-                    "device_id": e["device_id"], "pending": e["scope"] != "local"}
+                    "device_id": e["device_id"], "pending": e["scope"] != "local",
+                    "pending_change": {"revision": e["event_id"], "action": e["operation"],
+                                       "agent": e.get("agent", "unknown"), "device_id": e["device_id"]}}
+                if current is None:
+                    fact.update({"created_at": None, "created_by_agent": e.get("agent", "unknown"),
+                                 "created_by_device_id": e["device_id"], "updated_at": None,
+                                 "updated_by_agent": e.get("agent", "unknown"),
+                                 "updated_by_device_id": e["device_id"], "history": []})
+                facts[e["fact_id"]] = fact
         return facts
 
     def get(self, fact_id):
@@ -299,9 +307,30 @@ class Client:
                 body = (f"---\nfact_id: {json.dumps(fact_id)}\ntitle: {json.dumps(title)}\n"
                         f"revision: {json.dumps(f['revision'])}\n"
                         f"scope: {json.dumps(f['scope'])}\nstatus: {f['status']}\ncertainty: {f['certainty']}\n"
-                        f"pending: {str(f.get('pending', False)).lower()}\n---\n\n"
+                        f"pending: {str(f.get('pending', False)).lower()}\n"
+                        f"created_at: {json.dumps(f.get('created_at'))}\n"
+                        f"created_by_agent: {json.dumps(f.get('created_by_agent', 'unknown'))}\n"
+                        f"created_by_device_id: {json.dumps(f.get('created_by_device_id', 'unknown'))}\n"
+                        f"updated_at: {json.dumps(f.get('updated_at'))}\n"
+                        f"updated_by_agent: {json.dumps(f.get('updated_by_agent', f.get('agent', 'unknown')))}\n"
+                        f"updated_by_device_id: {json.dumps(f.get('updated_by_device_id', f.get('device_id', 'unknown')))}\n---\n\n"
                         "<!-- memory-share generated read-only view; submit changes via shared-memory MCP -->\n"
                         f"\n# {title}\n\n{f['content']}\n")
+                history = f.get("history", [])
+                if history:
+                    body += "\n## 修改记录\n\n| 时间（UTC） | 操作 | Agent | 设备 | Revision |\n|---|---|---|---|---|\n"
+                    for item in history:
+                        recorded = item.get("recorded_at")
+                        when = (time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(recorded)) + " UTC"
+                                if isinstance(recorded, (int, float)) else "未知（旧版记忆）")
+                        cells = [when, str(item.get("action", "unknown")), str(item.get("agent", "unknown")),
+                                 str(item.get("device_id", "unknown")), str(item.get("revision", "unknown"))]
+                        body += "| " + " | ".join(value.replace("|", "\\|").replace("\n", " ") for value in cells) + " |\n"
+                if f.get("pending_change"):
+                    change = f["pending_change"]
+                    body += (f"\n> 待同步修改：{change.get('action', 'update')}，由 Agent `"
+                             f"{change.get('agent', 'unknown')}`（设备 `{change.get('device_id', 'unknown')}`）提交。"
+                             "服务端确认后会写入正式修改记录。\n")
                 if existing != body:
                     atomic_write(path, body, private=False)
                     written += 1

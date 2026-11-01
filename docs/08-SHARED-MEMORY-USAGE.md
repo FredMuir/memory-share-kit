@@ -26,6 +26,13 @@
 | `certainty` | `candidate` 待核实；`confirmed` 已确认 |
 | `status` | `active` 有效；`retracted` 已撤销 |
 | `pending` | 尚未获得服务端同步确认；不是审批状态 |
+| `created_by_agent` / `created_by_device_id` | 首次被服务端接收时提交它的 Agent 和设备 |
+| `created_at` | 首次提交的服务端 Unix 时间戳（UTC） |
+| `updated_by_agent` / `updated_by_device_id` | 当前版本最近一次被服务端接收时的 Agent 和设备 |
+| `updated_at` | 当前版本最近一次提交的服务端 Unix 时间戳（UTC） |
+| `history` | 每个已接受版本的 revision、操作、Agent、设备和服务端接收时间；冲突或未同步的操作不计入 |
+
+新记忆由服务端首次接收时记录创建者和时间。每次成功更新、撤销或冲突解决都会追加一条历史；离线排队期间只显示待同步修改，服务端确认后才进入正式历史。Agent 名称来自对应 MCP profile 的配置，设备 ID 来自配对身份。升级前已存在的记忆无法追溯首次提交时间和创建 Agent，会标记为未知；升级后发生的修改仍会完整记录。
 
 ## 审批或修改
 

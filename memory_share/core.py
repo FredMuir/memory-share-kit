@@ -198,10 +198,41 @@ class Authority:
             if same and op in ("create", "update"):
                 response = {"event_id": e["event_id"], "status": "noop", "fact": current}
             elif valid:
+                recorded_at = time.time()
+                if current:
+                    # Preserve provenance on facts created before audit metadata existed.
+                    # Their original actor/time cannot be reconstructed reliably.
+                    history = list(current.get("history", []))
+                    created_at = current.get("created_at")
+                    created_by = current.get("created_by_agent")
+                    created_device = current.get("created_by_device_id")
+                    if "history" not in current and not history:
+                        history = [{"revision": current["revision"], "action": "legacy",
+                                    "agent": current.get("agent", "unknown"),
+                                    "device_id": current.get("device_id", "unknown"),
+                                    "recorded_at": current.get("updated_at"), "time_known": True}]
+                    if created_by is None:
+                        created_by = history[0].get("agent", "unknown (before audit tracking)") if history else "unknown (before audit tracking)"
+                    if created_device is None:
+                        created_device = history[0].get("device_id", "unknown") if history else "unknown"
+                else:
+                    history = []
+                    created_at = recorded_at
+                    created_by = e.get("agent", "") or "unknown"
+                    created_device = device
+                entry = {"revision": e["event_id"], "action": op,
+                         "agent": e.get("agent", "") or "unknown", "device_id": device,
+                         "recorded_at": recorded_at, "time_known": True}
+                # The initial create is already represented by created_*; history records
+                # every accepted revision after it, including the initial revision.
+                history.append(entry)
                 current = {"id": e["fact_id"], "revision": e["event_id"], "scope": e["scope"],
                            "title": e["title"], "content": e["content"], "certainty": e["certainty"],
                            "status": "retracted" if op == "retract" else "active", "source": e.get("source", ""),
-                           "agent": e.get("agent", ""), "device_id": device, "updated_at": time.time()}
+                           "agent": e.get("agent", ""), "device_id": device, "updated_at": recorded_at,
+                           "created_at": created_at, "created_by_agent": created_by,
+                           "created_by_device_id": created_device, "updated_by_agent": e.get("agent", "") or "unknown",
+                           "updated_by_device_id": device, "history": history}
                 db.execute("INSERT INTO facts VALUES(?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data", (current["id"], dumps(current)))
                 if op == "resolve":
                     resolved = e["resolves_event_id"]
