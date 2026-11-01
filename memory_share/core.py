@@ -260,6 +260,7 @@ class Authority:
                     created_at = current.get("created_at")
                     created_by = current.get("created_by_agent")
                     created_device = current.get("created_by_device_id")
+                    created_peer = current.get("created_network_peer")
                     if "history" not in current and not history:
                         history = [{"revision": current["revision"], "action": "legacy",
                                     "agent": current.get("agent", "unknown"),
@@ -274,9 +275,14 @@ class Authority:
                     created_at = recorded_at
                     created_by = e.get("agent", "") or "unknown"
                     created_device = device
+                    created_peer = e.get("network_peer")
                 entry = {"revision": e["event_id"], "action": op,
                          "agent": e.get("agent", "") or "unknown", "device_id": device,
                          "recorded_at": recorded_at, "time_known": True}
+                if e.get("network_peer"):
+                    entry["network_peer"] = e["network_peer"]
+                if e.get("agent_origin"):
+                    entry["agent_origin"] = e["agent_origin"]
                 # The initial create is already represented by created_*; history records
                 # every accepted revision after it, including the initial revision.
                 history.append(entry)
@@ -285,8 +291,10 @@ class Authority:
                            "status": "retracted" if op == "retract" else "active", "source": e.get("source", ""),
                            "agent": e.get("agent", ""), "device_id": device, "updated_at": recorded_at,
                            "created_at": created_at, "created_by_agent": created_by,
-                           "created_by_device_id": created_device, "updated_by_agent": e.get("agent", "") or "unknown",
-                           "updated_by_device_id": device, "history": history}
+                           "created_by_device_id": created_device, "created_network_peer": created_peer,
+                           "updated_by_agent": e.get("agent", "") or "unknown",
+                           "updated_by_device_id": device, "updated_network_peer": e.get("network_peer"),
+                           "history": history}
                 db.execute("INSERT INTO facts VALUES(?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data", (current["id"], dumps(current)))
                 if op == "resolve":
                     resolved = e["resolves_event_id"]

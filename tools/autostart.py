@@ -13,11 +13,14 @@ p.add_argument("--output", required=True)
 p.add_argument("--role", choices=["client", "server"], default="client")
 p.add_argument("--host", default="127.0.0.1")
 p.add_argument("--port", default="8731", type=int)
+p.add_argument("--allow-unauthenticated-private-network", action="store_true")
 a = p.parse_args()
 state = str(Path(a.state).expanduser().resolve())
 out = Path(a.output).resolve(); out.mkdir(parents=True, exist_ok=True)
 args = [sys.executable, "-m", "memory_share", "--state", state]
 args += ["worker", "--interval", "30"] if a.role == "client" else ["serve", "--host", a.host, "--port", str(a.port)]
+if a.role == "server" and a.allow_unauthenticated_private_network:
+    args.append("--allow-unauthenticated-private-network")
 label = "org.memoryshare." + a.role
 
 def sd_quote(s):

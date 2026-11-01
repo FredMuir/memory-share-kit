@@ -21,7 +21,7 @@ if ($LASTEXITCODE -ne 0) { throw 'venv failed' }
 $Python = Join-Path $Venv 'Scripts\python.exe'
 & $Python -m pip install -r (Join-Path $KitDir 'requirements.lock')
 if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed' }
-& $Python -m pip install --no-deps (Join-Path $KitDir 'dist\memory_share_kit-0.1.5-py3-none-any.whl')
+& $Python -m pip install --no-deps (Join-Path $KitDir 'dist\memory_share_kit-0.1.6-py3-none-any.whl')
 if ($LASTEXITCODE -ne 0) { throw 'Package installation failed' }
 if (-not (Test-Path (Join-Path $InstallRoot 'client.json'))) {
     & $Python -m memory_share --state $InstallRoot init --device $Device --vault $Vault
@@ -33,4 +33,4 @@ if ($LASTEXITCODE -ne 0) { throw 'Configuration generation failed' }
 if ($LASTEXITCODE -ne 0) { throw 'Autostart template generation failed' }
 Write-Host "Installed. Python executable: $Python"
 Write-Host "Private state: $InstallRoot"
-Write-Host 'Next: configure token, merge MCP snippets, exclude generated folder in Remotely Save.'
+Write-Host 'Next: configure the LAN/overlay endpoint without a token, merge the MCP snippet, and use the Obsidian edit workflow.'

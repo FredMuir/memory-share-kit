@@ -24,7 +24,7 @@ fi
 "$python_cmd" -m venv "$venv"
 python_bin="$venv/bin/python"
 "$python_bin" -m pip install -r "$kit_dir/requirements.lock"
-"$python_bin" -m pip install --no-deps "$kit_dir/dist/memory_share_kit-0.1.5-py3-none-any.whl"
+"$python_bin" -m pip install --no-deps "$kit_dir/dist/memory_share_kit-0.1.6-py3-none-any.whl"
 if [[ ! -f "$install_root/client.json" ]]; then
   "$python_bin" -m memory_share --state "$install_root" init --device "$device" --vault "$vault"
 else
@@ -34,4 +34,4 @@ fi
 "$python_bin" "$kit_dir/tools/autostart.py" --state "$install_root" --output "$install_root/autostart"
 echo "Installed. Python executable: $python_bin"
 echo "Private state: $install_root"
-echo 'Next: configure device token, merge generated MCP snippets, exclude generated folder in Remotely Save.'
+echo 'Next: configure the LAN/overlay endpoint without a token, merge the generated MCP snippet, and use the Obsidian edit workflow.'

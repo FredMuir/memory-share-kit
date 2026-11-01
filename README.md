@@ -1,4 +1,4 @@
-# 多电脑 Agent 共享记忆安装包 v0.1.5
+# 多电脑 Agent 共享记忆安装包 v0.1.6
 
 核心：Windows / macOS / Linux 上的 Hermes、Codex、MiniMax Code 等工具，通过**本机 stdio MCP**共用本机 SQLite；后台同步进程把事件提交到 VPS。VPS 故障不影响本机记忆工具。Obsidian 是人可读视图；Noema 是边缘离线辅助。
 
@@ -15,7 +15,7 @@
 
 完整的目标、验收标准、当前进度与分阶段路线见 [开发目标与路线图](docs/00-DEVELOPMENT-GOALS.md)。这里描述的是开发方向，完成情况以该文档和实际测试记录为准。
 
-这是可运行的源码安装包，不是架构示意或接口桩。当前已在 Linux CPython 3.12 测试真实 HTTP、SQLite 和 MCP SDK。Windows、macOS 的安装器和自启动文件已提供，**尚未在对应系统实机执行**；不得据此声称三平台已经部署。没有访问生产 VPS。
+这是可运行的源码安装包，提供本地优先的 MCP 与同步服务。各系统的部署和验证状态以实际环境核对结果为准。
 
 ## 从这里开始
 
@@ -26,6 +26,7 @@
 4. 配置 [Obsidian OneDrive Sync 与 Noema](docs/06-OBSIDIAN-NOEMA.md)。
 5. 执行 [验收、故障排查与回滚](docs/07-OPERATIONS.md)。
 6. 可复制的 [平台安装提示词](prompts) 和 [Agent 共享记忆规则](prompts/AGENT-COMMON.txt)。
+7. 各 Agent 的 [低 token 快速接入与使用指南](docs/09-AGENT-QUICK-START.md)。
 
 ## 优化后的实现
 
@@ -50,7 +51,7 @@
 - `installers/obsidian-assets.json`：Obsidian 1.14.5 官方下载资产与 SHA256。
 - `tools/autostart.py`：生成 Windows 计划任务、macOS launchd、Linux systemd 用户单元。
 - `requirements.lock`：固定本次已验证依赖，包含 Windows 条件依赖。
-- `dist/memory_share_kit-0.1.5-py3-none-any.whl`：三平台通用的本包 Python 安装文件；依赖另从固定清单安装。
+- `dist/memory_share_kit-0.1.6-py3-none-any.whl`：三平台通用的本包 Python 安装文件；依赖另从固定清单安装。
 - `memory_share/`：完整 Python 程序；`tests/`：自动化测试。
 
 Obsidian 安装器从官方 GitHub 下载，未打包重新分发的大体积 EXE/DMG。第一次安装需要网络和 Python 3.11+，建议 3.12。Agent 自身与模型账号不由此安装包安装或收费。
@@ -59,8 +60,8 @@ Obsidian 安装器从官方 GitHub 下载，未打包重新分发的大体积 EX
 
 ## 两条硬性配置
 
-1. **私有状态目录不得放在 Vault、OneDrive、iCloud 或任何同步目录。** 不要同步 `client.sqlite3`、`authority.sqlite3` 或令牌。
-2. **每台 Obsidian 的 Remotely Save 排除 `40-Agent-Memory/` 整个目录。** 这是各电脑自己渲染的视图；普通笔记继续同步。不要把同一目录再交给其他同步器。
+1. **私有状态目录不得放在 Vault、OneDrive、iCloud 或任何同步目录。** 不要同步 `client.sqlite3`、`authority.sqlite3` 或客户端队列。
+2. `40-Agent-Memory/Generated/` 是可编辑、会双向同步的记忆页；不要再从同步插件中排除它。Memory Share 私有数据库仍放在 Vault 外。
 
 首次 MVP 先用测试 Vault。正式迁入现有 Vault 前先备份，并保留已有目录和文件。脚本不覆盖已有 Agent 配置，不自动安装 Obsidian 社区插件，不操作现有 rclone 授权。
 
@@ -72,4 +73,4 @@ MCP 工具存在不等于 Agent 会自动调用。用项目 `AGENTS.md` 规则�
 
 Noema 的导入资料可离线用；自动关联 Vault、自动更新索引和离线记忆自动回流尚未验证。不要把资料包生成成功当成 Noema 已导入成功。
 
-所有用户属于同一信任域，设备令牌授予整个共享空间读写权限。本版不实现多人隔离、角色权限、公开互联网防护或认证反向代理。服务器默认 loopback，沿用你已有的受限访问入口；所有记忆接口要求设备令牌。
+所有用户属于同一信任域，网络内有访问权的设备可读写整个共享空间。LAN/Tailscale 模式可无 token 连接；服务端只接受私有地址、ULA 或 Tailscale 来源，并拒绝公网来源。无 token 时 Agent/设备标签是客户端自报，服务端记录观察到的来源 IP。不要做公网端口转发。其他场景保留 token 认证模式。

@@ -20,32 +20,32 @@
 99-Attachments/
 ```
 
-40 是各电脑从缓存渲染的只读视图；41 是用户可编辑的补充；42 是指定一台电脑发布的离线资料包。Vault 根目录的 `README-共享记忆用法.md` 说明如何检索、审批和修改记忆。
+40 是各电脑从缓存渲染的共享记忆；41 是用户可编辑的补充和冲突草稿；42 是指定一台电脑发布的离线资料包。Vault 根目录的 `README-共享记忆用法.md` 说明如何检索、审批和修改记忆。
 
 ## 2. OneDrive Sync（当前 VPS 与移动端配置）
 
 VPS 的 Memory Share Vault 和移动端使用社区插件 **OneDrive Sync**（插件 ID `onedrive-sync`，作者 Jeff Steinbok）。按插件的个人 Microsoft 账户设备码流程登录，使用 App Folder 根目录；Vault 的本地目录应位于 rclone 挂载目录之外。
 
 - 文件改动触发同步；VPS 配置关闭定时轮询、并发上限 2，冲突时创建副本。
-- 保留 `40-Agent-Memory/Generated/`，让记忆阅读视图随 Vault 同步；不要在 Obsidian 里编辑这批生成文件。
+- 保留 `40-Agent-Memory/Generated/`，让共享记忆和用户编辑随 Vault 同步。
 - 不要再对同一 Vault 启用 Remotely Save、OneDrive 桌面客户端或把 Vault 移入 rclone 挂载目录。本机只由 Obsidian 插件写 Vault；rclone 仅把 OneDrive 挂载到另一个目录。
 - 插件说明与高级设置：[JeffSteinbok/obsidian-onedrive](https://github.com/JeffSteinbok/obsidian-onedrive)。个人账户默认使用 App Folder；企业/学校账户需要额外 Entra app 配置。
 
 ## 3. 记忆如何显示和编辑
 
-后台 worker 每 30 秒尝试同步并导出。手动命令：
+后台 worker 每 30 秒尝试同步、导入 Obsidian 修改并刷新共享记忆。手动命令：
 
 ```text
 PYTHON -m memory_share --state STATE export
 ```
 
-生成文件名使用 `<标题短名>--<完整_fact_id>.md`，Markdown 标题使用人类可读的记忆标题；YAML 属性保留 `title`、完整 `fact_id`、`revision`、`scope`、`certainty`、`status`、`pending`、创建者、最近修改者及时间。正文“修改记录”表按 revision 列出每次已接受的 Agent、设备、操作和 UTC 时间。升级时先从服务端成功事件日志回填旧记忆的历史；日志缺失的字段标为未知。新提交由服务端记录接收时间。文件名便于浏览，完整 ID 便于 Agent 精确定位。修改记忆标题后，导出器会在旧文件仍与导出清单一致时安全重命名；手动改动过的旧文件会保留并报告。重复导出相同内容不重写，减少版本噪声。
+生成文件名使用 `<标题短名>--<完整_fact_id>.md`，Markdown 标题和正文可直接在 Obsidian 编辑。YAML 属性保留 `fact_id`、`revision`、`scope`、`certainty`、创建者、最近修改者及时间。正文里的内容标记之间是可编辑正文，“修改记录”表只读展示已接受版本。升级时会从服务端成功事件日志回填旧记忆的历史。
 
-生成文件是只读视图。**直接改 Markdown 不会提交主库**。修改前先用 `memory_get` 获取当前 revision，再由 Agent 调用 `memory_update`；新增用 `memory_store`，撤销用 `memory_retract`。`certainty=candidate` 表示待核实，用户确认或有可复核证据后才设为 `confirmed`；`pending` 指客户端事件尚未获得服务端确认，不代表用户审批状态。同步后导出视图会更新。
+编辑标题行或内容标记之间的正文并保存，后台会把变更按笔记的 `revision` 排队提交；显示 `pending: true` 表示等待服务器确认。用户把 `certainty` 改成 `confirmed` 即表示批准该事实。不要编辑 `fact_id`、`revision`、`scope`、时间和归属属性；不要删除文件来撤销记忆，撤销仍用 `memory_retract`。
 
-应在 41-Memory-Notes 写补充，或让电脑 Agent 使用 memory_update；要修改已有共享事实，先 memory_get 获取 revision。尚不开发 Obsidian 插件。
+若另一台设备已经改过该事实，旧 revision 的 Obsidian 修改不会覆盖新版本；系统会在 `41-Memory-Notes/Shared-Memory-Conflicts/` 保存两版草稿，并在 `40-Agent-Memory/Conflicts/` 提供冲突说明。选择或合并后由 Agent 调用 `memory_resolve`，或将草稿按最新 revision 重新提交。
 
-如果误改了生成文件：先把修改移到普通笔记并通过 Agent 提交；确认修改已保存后，移走该生成文件，下一次 export 会从缓存重建。不要盲目删除整个目录或 manifest。
+OneDrive 或 rclone 同步延迟时，修改先保留在本地 Vault；看到服务器确认后才算跨设备提交。删除生成页不会删除主库记忆；客户端会从共享缓存重建它。
 
 ## 4. 本机 Agent 读取普通笔记
 

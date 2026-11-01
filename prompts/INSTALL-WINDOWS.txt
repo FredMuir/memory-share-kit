@@ -1,15 +1,15 @@
 请在当前 Windows 电脑安装并验证 Memory Share Kit；本目录包含完整安装文件。先读 README.md、docs/02-WINDOWS.md、docs/05-AGENTS.md 和 docs/06-OBSIDIAN-NOEMA.md。
 
-目标：本机 Hermes / Codex / MiniMax Code 共用一套本地 SQLite 和队列，经 MCP 接入；VPS 不可达时仍能本地读写。Obsidian 只读生成记忆视图，普通笔记走既有 Remotely Save + OneDrive。不开发新 App，不设计网络，不改生产 VPS。
+目标：本机 Hermes / Codex / MiniMax Code 共用一套本地 SQLite 和队列，经 MCP 接入；VPS 不可达时仍能本地读写。Obsidian 生成记忆视图可直接编辑并由 worker 回写，普通笔记继续走既有 Remotely Save + OneDrive。按用户授权可部署和调整生产 VPS。
 
 执行顺序：
 1. 盘点 Windows、Python、Obsidian、实际 Agent 版本、现有 Vault 与配置。缺少设备ID、Vault路径或服务器地址时只询问必要参数；在参数到达前继续做只读盘点。
 2. 备份将要修改的配置。已有 Obsidian 和 Vault 保持，不能删除或重建。
 3. 运行 installers/install-obsidian-windows.ps1（已有安装可跳过），再 installers/install-windows.ps1；不要装进 OneDrive 或 Vault。
-4. 令牌由用户在 configure 提示中隐藏输入，不让用户贴到聊天，不打印 client.json 或环境变量。没有令牌先验证本地功能，不能伪造联网成功。
+4. 在可信 LAN/Tailscale 内使用 `configure --no-auth --allow-private-http` 设置可达 VPS 地址；无需令牌。确认服务拒绝公网来源，不配置端口转发。
 5. 合并 generated-config 中与实际 Agent 对应的片段，不覆盖其他配置。不改变宿主工具权限策略。
-6. 引导用户在 Obsidian 打开实际 Vault 并在 Remotely Save 排除 40-Agent-Memory。插件 UI 不可用时明确留下待完成项，不能称已经设置。
+6. 确认 Obsidian `40-Agent-Memory/Generated/` 会通过 OneDrive 同步；用户可以编辑标题和正文，后台按 revision 提交。私有 SQLite 与队列必须在 Vault 外。
 7. 查看生成的原生计划任务脚本后启用；验证任务确实运行、status 正常。
-8. 在本机执行 tests，实际 MCP 读写，再做另一台电脑同步。记录 Windows 版本、Agent 版本和结果。
+8. 按用户要求执行验证；记录 Windows 版本、Agent 版本和结果。不得预先宣称未执行的验证通过。
 
 授权范围是本机可回滚安装与配置。不要升级或重装已有 Agent，不关闭安全策略，不修改全局 ExecutionPolicy，不清空任何原生记忆。遇到真正破坏性操作才停下来说明。最终报告必须分清已完成、未验证和需要用户输入的项。

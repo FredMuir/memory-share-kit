@@ -6,8 +6,8 @@
 
 客户端使用 installers/install-unix.sh，协调端使用 install-server-linux.sh，二者独立状态目录。不要进入 Hermes venv 安装依赖，不升级 Hermes，不复制其运行时数据库。脚本默认安装不启用服务；检查生成的 systemd 用户单元后启用。服务器若需要开机无人登录恢复，按指南确认 linger 或既有服务管理方式。
 
-只用一设备一令牌；不要输出到聊天或日志。客户端隐藏输入，合并 MCP 片段。共享层先用真实 HTTP 和 stdio 验收，不能把 REST 路径当 MCP。
+在可信 LAN/Tailscale 内运行 configure --no-auth --allow-private-http；不发放设备令牌，不打开公网端口。为宿主合并一次本机 stdio MCP 片段，并验证本地工具与私网同步。不能把 REST 路径当标准远程 MCP。
 
-执行自动化测试和停服/恢复测试。rclone 只有在确认真实 remote 后才执行 backup-upload；必须远端 SHA256 验证通过才报告备份成功。保留本地备份，未授权时不修改或删除 OneDrive 内容。
+按用户要求执行运行验证和停服/恢复检查；不要把未执行的自动化测试说成通过。rclone 只有在确认真实 remote 后才执行 backup-upload；必须远端 SHA256 验证通过才报告备份成功。保留本地备份，未授权时不修改或删除 OneDrive 内容。
 
 这是用户在目标主机执行安装的任务提示。若当前只是其他工作区而不是目标 VPS，不要谎称已部署；先交付可审阅文件。最终提供改动路径、服务状态、测试结果、未完成项和回滚方法。

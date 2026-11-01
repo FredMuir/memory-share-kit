@@ -18,7 +18,7 @@ bash installers/install-obsidian-unix.sh
 bash installers/install-unix.sh linux-main "$HOME/Documents/MyVault"
 MEMORY_ROOT="${XDG_DATA_HOME:-$HOME/.local/share}/memory-share"
 MEMORY_PYTHON="$MEMORY_ROOT/venv/bin/python"
-"$MEMORY_PYTHON" -m memory_share --state "$MEMORY_ROOT" configure --server 'https://你的已有受限入口'
+"$MEMORY_PYTHON" -m memory_share --state "$MEMORY_ROOT" configure --server 'http://<VPS_LAN_OR_TAILSCALE_ADDRESS>:8731' --allow-private-http --no-auth
 "$MEMORY_PYTHON" -m memory_share --state "$MEMORY_ROOT" sync
 ```
 
@@ -62,18 +62,14 @@ SERVER_ROOT="$HOME/.local/share/memory-share-server"
 SERVER_PYTHON="$SERVER_ROOT/venv/bin/python"
 ```
 
-默认只绑定 `127.0.0.1:8731`。若你的现有连接安排要求绑定另一个地址，安装前设置 `MEMORY_SHARE_BIND_HOST` 为你已有的受限接口地址；不需要改成无认证公网服务。新服务所有数据接口始终要求令牌。
-
-为每台设备分别发放令牌（同一设备重新执行会轮换令牌）：
+默认绑定 `127.0.0.1:8731`。在可信 LAN/Tailscale 部署时启用私网无 token 模式：
 
 ```bash
-"$SERVER_PYTHON" -m memory_share --state "$SERVER_ROOT" issue-token --device win-main
-"$SERVER_PYTHON" -m memory_share --state "$SERVER_ROOT" issue-token --device mac-main
-"$SERVER_PYTHON" -m memory_share --state "$SERVER_ROOT" issue-token --device linux-main
-"$SERVER_PYTHON" -m memory_share --state "$SERVER_ROOT" issue-token --device vps-hermes
+MEMORY_SHARE_ALLOW_UNAUTHENTICATED_PRIVATE_NETWORK=1 \
+MEMORY_SHARE_BIND_HOST='0.0.0.0' bash installers/install-server-linux.sh
 ```
 
-这是唯一有意输出令牌的命令。不要贴到聊天、日志或截图；分别在相应设备 configure 隐藏输入。撤销使用 `revoke-token --device ID`。
+数据接口只接受 RFC1918/ULA/Tailscale 来源地址。无 token 时 Agent 和设备标签由客户端自报，服务端还记录来源 IP。不要开放路由器端口转发。
 
 ### 协调服务自动启动
 

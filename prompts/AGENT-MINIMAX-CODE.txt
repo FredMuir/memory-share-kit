@@ -2,6 +2,6 @@
 
 先核对真实版本与界面。把 generated-config/minimax-code.mcp.json 的 mcpServers.shared-memory 合并到当前主项目目录的 .mcp.json，保留现有服务器；若同名存在先比较并备份。不要假设父目录配置会向下继承，也不要把 MiniMax 媒体 API 的 MCP 当成记忆 MCP。
 
-使用 standard 模式，避免 lightweight 模式省略工具。重启后检查 /mcp，并实际调用 memory_status 与 memory_search；配置存在或 available 都不能代替写入验收。
+使用 standard 模式，避免 lightweight 模式省略工具。处理会延续项目背景的任务时做一次窄范围 memory_search，只对相关项 memory_get；避免每轮 status 调用和重复装载长正文。配置存在或 available 都不能代替工具实际可用。
 
-遵循 AGENT-COMMON.txt。保留 MiniMax 自己的会话和原生记忆，不同步其运行数据库。遇到桌面版或旧版格式不匹配，核对当前官方文档，说明差异，不编造配置键。
+遵循 AGENT-COMMON.txt。保留 MiniMax 自己的会话和原生记忆，不同步其运行数据库。Obsidian Generated 正文和标题可直接编辑，后台按 revision 写回；保护 ID、revision、scope 和内容标记。遇到桌面版或旧版格式不匹配，核对当前官方文档，说明差异，不编造配置键。

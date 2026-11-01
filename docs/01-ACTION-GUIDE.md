@@ -1,6 +1,6 @@
 # 精确行动指南
 
-基准：2026-10-31；包版本 0.1.5。当前系统未提供各电脑地址、Vault 路径与 Agent 版本，所以下面把必须替换的参数逐一列明，不臆造环境。
+基准：2026-11-01；包版本 0.1.6。部署地址、Vault 路径与 Agent 连接状态以本次环境核对结果为准。
 
 ## 0. 给设备和项目命名
 
@@ -28,7 +28,7 @@
 
 ## 2. 安装 VPS 协调端
 
-按 [Linux 指南](04-LINUX.md) 的 VPS 章节安装、生成一设备一令牌、启动 systemd。令牌只在设备配对输入，不写入提示词或 MCP 配置片段。
+按 [Linux 指南](04-LINUX.md) 的 VPS 章节安装，在可信 LAN/Tailscale 模式下启动 systemd。数据服务只接受私网来源；每台设备首次填入可达地址，不需要令牌。
 
 服务器健康检查 `GET /healthz` 不需认证，只返回进程健康。它不能证明设备授权成功；用客户端实际同步验证。
 
@@ -38,14 +38,14 @@
 2. 下载并校验、安装 Obsidian；已有版本保持不动。
 3. 本机安装脚本初始化本地队列并创建缺少的 Vault 分类目录。
 4. 打开 Obsidian，选择“打开文件夹作为仓库”，指向同一个 Vault。
-5. 在 Remotely Save 中配置排除目录；先别同步空白或错误目录。
-6. `configure` 输入本机专属令牌，执行真实 `sync`。
+5. 在 OneDrive 同步设置中确认 `40-Agent-Memory/Generated/` 已纳入同步；不要同步 Vault 外的私有数据库和队列。
+6. 使用 `configure --server <可达 LAN/Tailscale 地址> --allow-private-http --no-auth`，执行真实 `sync`。
 7. 合并生成的 Agent 配置，重启 Agent；用 `memory_store` 和 `memory_search` 验证。
 8. 启用平台原生 worker 自启动。
 
 ## 4. 安装第二台电脑
 
-独立设备 ID、独立令牌、本机状态目录。可以选不同 Agent：A 用 Hermes，B 用 Codex。B 同步后应检索到 A 的同一 fact_id。
+独立设备 ID、本机状态目录。可以选不同 Agent：A 用 Hermes，B 用 Codex。B 同步后应检索到 A 的同一 fact_id。
 
 完成一次 [离线和并发验收](07-OPERATIONS.md) 后，再扩展第三台电脑。
 

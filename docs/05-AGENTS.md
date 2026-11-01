@@ -1,8 +1,8 @@
 # Hermes、Codex、MiniMax Code 接入
 
-三平台使用相同工具协议，区别仅在生成的绝对 Python 路径。先完成本机安装、configure 和 sync。配置生成器不修改原文件，也不自动设置宽泛权限。
+各 Agent 使用相同的本机 stdio MCP。MCP 工具在本机调用低开销 SQLite 缓存和离线队列；worker 通过局域网或 Tailscale 向 VPS 同步。私网模式不要求每个设备签发 token，VPS 只接受 RFC1918、ULA 和 Tailscale 地址。每个 Agent 宿主仍需一次性注册本机 MCP 项。
 
-生成片段包含本机绝对路径，只用于本机合并；不要把它们作为共享记忆同步，也不要未经检查提交到项目仓库。不同电脑分别生成自己的配置，项目事实仍用同一个稳定 project_id。
+生成片段包含本机绝对路径，只用于本机合并；不要把它们作为共享记忆同步，也不要未经检查提交到项目仓库。每台电脑需要选择可达的 VPS LAN 或 Tailscale 地址运行一次 `configure --server ... --no-auth --allow-private-http`；无需 token。不同电脑分别生成自己的配置，项目事实仍用同一个稳定 project_id。
 
 ## 1. Codex CLI / 使用本机配置的 IDE
 
@@ -35,7 +35,9 @@ codex mcp add shared-memory -- ABSOLUTE_PYTHON -m memory_share --state ABSOLUTE_
 5. 按当前安装方式重启 Hermes（CLI 重新启动；gateway 按现有服务方式重启，不猜服务名）。
 6. 在新会话实际调用 memory_status、memory_search、memory_store。
 
-当前包只接 MCP。保留未来通过官方 MemoryProvider 自动检索的空间，但没有提供或假装已安装 provider hook。
+私网 API 限制来源 IP，但不验证 Agent 或设备身份；不带 token 的写入中 Agent/设备名称由客户端自报，并附服务端观察到的来源 IP。只在可信 LAN/Tailscale 内使用。
+
+当前包通过本机 stdio MCP 桥接到私网同步 API；没有把标准远程 MCP HTTP 服务暴露到公网。保留未来通过官方 MemoryProvider 自动检索的空间，但没有提供或假装已安装 provider hook。
 
 官方依据：https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp 。
 
@@ -56,7 +58,7 @@ codex mcp add shared-memory -- ABSOLUTE_PYTHON -m memory_share --state ABSOLUTE_
 
 ## 4. 其他 Agent
 
-若支持 stdio MCP，使用 `generated-config/generic.mcp.json` 的 command/args 按其官方格式接入，并把 --agent 改为真实名称。若只支持远程 HTTP MCP，不能把本包 `/v1/events` REST 当成 MCP URL：**本包尚未提供远程 MCP 服务**。这类客户端需另行适配，不影响本地 stdio 核心。
+若支持 stdio MCP，使用 `generated-config/generic.mcp.json` 的 command/args 按其官方格式接入，并把 --agent 改为真实名称。不要把同步 API `/v1/events` REST 误当成标准远程 MCP URL；MCP 工具经本机 stdio adapter 调用，私网 HTTP 只负责同步数据。
 
 ## 5. 提示词与自动化边界
 

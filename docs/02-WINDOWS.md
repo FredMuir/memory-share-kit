@@ -38,14 +38,14 @@ $MemoryPython = Join-Path $MemoryRoot 'venv\Scripts\python.exe'
 
 ## 4. 配对与同步
 
-服务器先运行 `issue-token --device win-main`。回到 Windows：
+选择本机当前可达的 VPS LAN 地址或 Tailscale 地址：
 
 ```powershell
-& $MemoryPython -m memory_share --state $MemoryRoot configure --server 'https://你的已有受限入口'
+& $MemoryPython -m memory_share --state $MemoryRoot configure --server 'http://<VPS_LAN_OR_TAILSCALE_ADDRESS>:8731' --allow-private-http --no-auth
 & $MemoryPython -m memory_share --state $MemoryRoot sync
 ```
 
-configure 隐藏输入令牌。若已有的可信传输使用非 loopback HTTP，明确追加 `--allow-private-http`；程序不会猜测网络是否安全，也不会绕过 TLS 校验。
+私网模式不提示输入令牌。VPS 会拒绝非私网来源；不要配置端口转发。MCP 配置仍需在 Codex 中合并一次，之后可直接使用本机队列。
 
 `sync` 必须返回 `"ok":true`；不是仅检查 /healthz。
 

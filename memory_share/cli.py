@@ -34,7 +34,7 @@ def init(root, device, vault):
     atomic_write(config_path, dumps({"device_id": device, "vault": str(vault), "server_url": "", "token": "",
         "allow_private_http": False, "note_folders": ["20-Projects", "30-Knowledge", "41-Memory-Notes"]}))
     Client(root)
-    return {"state_dir": str(root), "vault": str(vault), "next": "configure, then snippets; exclude 40-Agent-Memory from Remotely Save before syncing"}
+    return {"state_dir": str(root), "vault": str(vault), "next": "configure the LAN/overlay endpoint without a token, then generate the local Agent MCP entry"}
 
 
 def snippets(root):
@@ -60,6 +60,7 @@ def main(argv=None):
     sub = p.add_subparsers(dest="command", required=True)
     q = sub.add_parser("init"); q.add_argument("--device", required=True); q.add_argument("--vault", required=True)
     q = sub.add_parser("configure"); q.add_argument("--server", required=True); q.add_argument("--allow-private-http", action="store_true")
+    q.add_argument("--no-auth", action="store_true", help="Use a server restricted to private LAN/overlay peers")
     sub.add_parser("snippets")
     sub.add_parser("status")
     sub.add_parser("sync")
@@ -70,6 +71,8 @@ def main(argv=None):
     q.add_argument("--certainty", choices=["candidate", "confirmed"], default="candidate")
     q = sub.add_parser("mcp"); q.add_argument("--agent", required=True)
     q = sub.add_parser("serve"); q.add_argument("--host", default="127.0.0.1"); q.add_argument("--port", type=int, default=8731)
+    q.add_argument("--allow-unauthenticated-private-network", action="store_true",
+                    help="Allow tokenless requests only from private LAN, ULA or Tailscale peers")
     q = sub.add_parser("issue-token"); q.add_argument("--device", required=True)
     q = sub.add_parser("revoke-token"); q.add_argument("--device", required=True)
     q = sub.add_parser("backup"); q.add_argument("--output", required=True)
@@ -89,8 +92,8 @@ def main(argv=None):
             raise ValueError("Provide http(s) server base URL without credentials, query, fragment")
         if url.scheme == "http" and url.hostname not in ("127.0.0.1", "localhost", "::1") and not a.allow_private_http:
             raise ValueError("Use HTTPS or explicitly --allow-private-http for your existing trusted transport")
-        token = getpass.getpass("Device token (hidden): ").strip()
-        if len(token) < 24:
+        token = "" if a.no_auth else getpass.getpass("Device token (hidden): ").strip()
+        if not a.no_auth and len(token) < 24:
             raise ValueError("Device token is too short")
         c.update(server_url=a.server.rstrip("/"), token=token, allow_private_http=a.allow_private_http)
         atomic_write(path, dumps(c))
@@ -107,7 +110,8 @@ def main(argv=None):
         authority = Authority(root / "authority.sqlite3")
         if a.command == "serve":
             from .server import create_server
-            server = create_server(authority.path, a.host, a.port)
+            server = create_server(authority.path, a.host, a.port,
+                                   allow_unauthenticated_private_network=a.allow_unauthenticated_private_network)
             try:
                 server.serve_forever()
             finally:

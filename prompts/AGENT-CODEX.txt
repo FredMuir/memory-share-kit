@@ -2,6 +2,6 @@
 
 接入：合并本机 generated-config/codex.config.toml 内 shared-memory 小节，不覆盖 ~/.codex/config.toml 其他内容。若已有同名小节，先比较并备份；不要生成重复 TOML table。使用本机绝对 Python 路径和本机私有 state。不要把本机 stdio 配置误用于无法访问本机的云端执行环境。
 
-运行：遵循 AGENT-COMMON.txt。先实际 memory_status，再执行一次检索确认连接。不要把 codex mcp list 的 configured 当成调用成功。多次并行任务可以共用本机队列；共享事实按 revision 更新，禁止直接修改 40-Agent-Memory/Generated。
+运行：遵循 AGENT-COMMON.txt。在会受既有决策影响的任务里先做一次窄范围 memory_search；只有相关时再 memory_get。不要每次固定调用 memory_status，也不要把 codex mcp list 的 configured 当作远端同步成功。共享事实按 revision 更新。Obsidian Generated 正文和标题可直接编辑，后台会提交；保护 fact_id、revision、scope 和内容标记。
 
 验收：保存一条 project:memory-share-acceptance 测试事实，调用 memory_sync，报告实际 fact_id 与状态；再由另一台电脑不同 Agent 读取同一事实。保留原生 Codex 状态，不清空 ~/.codex。

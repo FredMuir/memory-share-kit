@@ -31,11 +31,11 @@ Obsidian 官方通用 DMG 经 SHA256 校验后安装到 `~/Applications`；已�
 ```bash
 MEMORY_ROOT="$HOME/Library/Application Support/MemoryShare"
 MEMORY_PYTHON="$MEMORY_ROOT/venv/bin/python"
-"$MEMORY_PYTHON" -m memory_share --state "$MEMORY_ROOT" configure --server 'https://你的已有受限入口'
+"$MEMORY_PYTHON" -m memory_share --state "$MEMORY_ROOT" configure --server 'http://<VPS_LAN_OR_TAILSCALE_ADDRESS>:8731' --allow-private-http --no-auth
 "$MEMORY_PYTHON" -m memory_share --state "$MEMORY_ROOT" sync
 ```
 
-非 loopback HTTP 的已有可信传输需明确追加 `--allow-private-http`。输入服务器为 `mac-main` 发放的专属令牌，不复用 Windows 令牌。
+LAN/Tailscale 模式不需要设备令牌。确认服务仅限私网来源，不配置公网转发。
 
 ## 4. Agent 接入
 

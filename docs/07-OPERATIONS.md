@@ -41,7 +41,7 @@ Linux 本次真实通过；Windows/macOS 请在目标系统执行后记录。One
 
 一次 sync 最多上传 100 条，避免长时间阻塞工具。大量队列会由 worker 后续轮次继续上传；`ok:true` 表示本次同步流程完成，不等于 pending 必然为 0。上线验收应同时检查 pending=0。
 
-`HTTP 401` 优先核对服务器设备 token 是否被轮换/撤销，使用 configure 重新隐藏输入。`HTTP 3xx` 不跟随重定向，避免令牌跨来源泄漏；改为准确入口 URL。
+旧式 token 模式收到 `HTTP 401` 时检查配对状态。私网无 token 模式应只在 LAN/Tailscale 地址连通；公网来源会被拒绝。`HTTP 3xx` 不跟随重定向，改为准确入口 URL。
 
 VPS 服务日志：`journalctl --user -u memory-share-server.service --since today`。
 客户端 Linux：`journalctl --user -u memory-share-client.service --since today`。
@@ -55,7 +55,7 @@ Windows：任务计划程序状态及本地 status；macOS：launchctl print 与
 PYTHON -m memory_share --state SERVER_STATE backup --output NEW_BACKUP_FILE
 ```
 
-目标必须为新文件，不能覆盖运行主库。上传与远端 SHA256 验证用 backup-upload，详见 Linux 指南。备份含私人记忆和设备 token 哈希，不能放公开目录。客户端 client.json 含实际令牌，不要随手放入普通笔记。
+目标必须为新文件，不能覆盖运行主库。上传与远端 SHA256 验证用 backup-upload，详见 Linux 指南。备份含私人记忆和设备记录，不能放公开目录。旧式客户端 `client.json` 可能含令牌，不要放入普通笔记。
 
 恢复演练先在临时目录进行，成功后才操作生产。生产恢复步骤：
 

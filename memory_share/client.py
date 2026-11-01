@@ -83,7 +83,8 @@ class Client:
                     "source": e.get("source", ""), "agent": e.get("agent", ""),
                     "device_id": e["device_id"], "pending": e["scope"] != "local",
                     "pending_change": {"revision": e["event_id"], "action": e["operation"],
-                                       "agent": e.get("agent", "unknown"), "device_id": e["device_id"]}}
+                                       "agent": e.get("agent", "unknown"), "device_id": e["device_id"],
+                                       "base_revision": e.get("base_revision")}}
                 if current is None:
                     fact.update({"created_at": None, "created_by_agent": e.get("agent", "unknown"),
                                  "created_by_device_id": e["device_id"], "updated_at": None,
@@ -157,16 +158,18 @@ class Client:
 
     def request(self, method, endpoint, data=None):
         url = self.config.get("server_url", "").rstrip("/")
-        if not url or not self.config.get("token"):
-            raise ValueError("Server URL and device token are not configured")
+        if not url:
+            raise ValueError("Server URL is not configured")
         parsed = urllib.parse.urlsplit(url)
         if parsed.scheme not in ("http", "https") or parsed.username or parsed.password or parsed.query or parsed.fragment:
             raise ValueError("Invalid server URL")
         if parsed.scheme == "http" and parsed.hostname not in ("localhost", "127.0.0.1", "::1") and not self.config.get("allow_private_http"):
             raise ValueError("Non-loopback HTTP requires explicit allow_private_http for your existing trusted transport")
         body = dumps(data).encode() if data is not None else None
-        req = urllib.request.Request(url + endpoint, data=body, method=method,
-                headers={"Authorization": "Bearer " + self.config["token"], "Content-Type": "application/json"})
+        headers = {"Content-Type": "application/json"}
+        if self.config.get("token"):
+            headers["Authorization"] = "Bearer " + self.config["token"]
+        req = urllib.request.Request(url + endpoint, data=body, method=method, headers=headers)
         with urllib.request.build_opener(NoRedirect()).open(req, timeout=8) as resp:
             raw = resp.read(16 * 1024 * 1024 + 1)
             if len(raw) > 16 * 1024 * 1024:
@@ -260,17 +263,146 @@ class Client:
             conflicts = db.execute("SELECT COUNT(*) FROM conflicts").fetchone()[0]
         return {"device_id": self.config["device_id"], "counts": counts, "conflicts": conflicts,
                 "last_sync": meta.get("last_sync"), "last_error": meta.get("last_error", ""),
-                "configured": bool(self.config.get("server_url") and self.config.get("token"))}
+                "configured": bool(self.config.get("server_url"))}
 
     def conflicts(self):
         with connect(self.path) as db:
             return [json.loads(r[0]) for r in db.execute("SELECT data FROM conflicts")]
 
+    @staticmethod
+    def _parse_exported_note(markdown):
+        """Parse the small frontmatter subset emitted by this exporter."""
+        if not markdown.startswith("---\n"):
+            raise ValueError("Missing frontmatter")
+        header, separator, body = markdown[4:].partition("\n---\n")
+        if not separator:
+            raise ValueError("Unclosed frontmatter")
+        props = {}
+        for line in header.splitlines():
+            key, colon, raw = line.partition(":")
+            if not colon:
+                continue
+            raw = raw.strip()
+            try:
+                value = json.loads(raw)
+            except (json.JSONDecodeError, TypeError):
+                value = raw.strip("\"'")
+            props[key.strip()] = value
+        fact_id = props.get("fact_id")
+        if not isinstance(fact_id, str):
+            raise ValueError("Missing fact_id")
+        identifier(fact_id)
+        begin = f"<!-- memory-share:{fact_id}:content:start -->"
+        end = f"<!-- memory-share:{fact_id}:content:end -->"
+        if begin not in body or end not in body:
+            raise ValueError("Editable content markers are missing")
+        before, segment = body.split(begin, 1)
+        content, found, _after = segment.partition(end)
+        if not found:
+            raise ValueError("Editable content end marker is missing")
+        if content.startswith("\n"):
+            content = content[1:]
+        if content.endswith("\n"):
+            content = content[:-1]
+        title = next((line[2:].strip() for line in before.splitlines() if line.startswith("# ")), "")
+        if not title:
+            title = props.get("title", "")
+        title = " ".join(str(title).split())
+        if not title:
+            raise ValueError("Missing title")
+        return {"fact_id": fact_id, "revision": props.get("revision"),
+                "pending": props.get("pending") is True,
+                "pending_base_revision": props.get("pending_base_revision"),
+                "scope": props.get("scope"), "certainty": props.get("certainty", "candidate"),
+                "title": title, "content": content, "source": props.get("source", "")}
+
+    @staticmethod
+    def _note_body(fact):
+        fact_id = fact["id"]
+        title = " ".join(str(fact.get("title") or "Shared memory").split())
+        body = (f"---\nfact_id: {json.dumps(fact_id)}\ntitle: {json.dumps(title)}\n"
+                f"revision: {json.dumps(fact['revision'])}\n"
+                f"pending_base_revision: {json.dumps((fact.get('pending_change') or {}).get('base_revision'))}\n"
+                f"scope: {json.dumps(fact['scope'])}\nstatus: {fact['status']}\ncertainty: {fact['certainty']}\n"
+                f"source: {json.dumps(fact.get('source', ''))}\n"
+                f"pending: {str(bool(fact.get('pending'))).lower()}\n"
+                f"created_at: {json.dumps(fact.get('created_at'))}\n"
+                f"created_by_agent: {json.dumps(fact.get('created_by_agent', 'unknown'))}\n"
+                f"created_by_device_id: {json.dumps(fact.get('created_by_device_id', 'unknown'))}\n"
+                f"created_network_peer: {json.dumps(fact.get('created_network_peer'))}\n"
+                f"updated_at: {json.dumps(fact.get('updated_at'))}\n"
+                f"updated_by_agent: {json.dumps(fact.get('updated_by_agent', fact.get('agent', 'unknown')))}\n"
+                f"updated_by_device_id: {json.dumps(fact.get('updated_by_device_id', fact.get('device_id', 'unknown')))}\n"
+                f"updated_network_peer: {json.dumps(fact.get('updated_network_peer'))}\n---\n\n"
+                "<!-- Edit the heading and text between the content markers; saved changes sync automatically. -->\n"
+                f"\n# {title}\n\n<!-- memory-share:{fact_id}:content:start -->\n"
+                f"{fact['content']}\n<!-- memory-share:{fact_id}:content:end -->\n")
+        history = fact.get("history", [])
+        if history:
+            body += "\n## 修改记录\n\n| 时间（UTC） | 操作 | Agent | 设备 | 网络来源 | Revision |\n|---|---|---|---|---|---|\n"
+            for item in history:
+                recorded = item.get("recorded_at")
+                when = (time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(recorded)) + " UTC"
+                        if isinstance(recorded, (int, float)) else "未知（旧版记忆）")
+                cells = [when, str(item.get("action", "unknown")), str(item.get("agent", "unknown")),
+                         str(item.get("device_id", "unknown")), str(item.get("network_peer", "")),
+                         str(item.get("revision", "unknown"))]
+                body += "| " + " | ".join(value.replace("|", "\\|").replace("\n", " ") for value in cells) + " |\n"
+        if fact.get("pending_change"):
+            change = fact["pending_change"]
+            body += (f"\n> 待同步修改：{change.get('action', 'update')}，由 Agent `"
+                     f"{change.get('agent', 'unknown')}`（设备 `{change.get('device_id', 'unknown')}`）提交。"
+                     "同步确认后会进入正式修改记录。\n")
+        return body
+
+    def _save_edit_conflict(self, vault, markdown, parsed, current, reason):
+        folder = Path(vault) / "41-Memory-Notes" / "Shared-Memory-Conflicts"
+        folder.mkdir(parents=True, exist_ok=True)
+        fact_id = (parsed or {}).get("fact_id") or (current or {}).get("id", "unknown")
+        base = (parsed or {}).get("revision") or "unversioned"
+        # Frontmatter is user-editable; never let a revision value escape this folder.
+        base = re.sub(r"[^A-Za-z0-9_.-]+", "-", str(base))[:80] or "unversioned"
+        digest = hashlib.sha256(markdown.encode("utf-8")).hexdigest()[:10]
+        path = folder / f"{fact_id}--{base}--{digest}.md"
+        if not path.exists():
+            latest = current or {}
+            title = (parsed or {}).get("title") or latest.get("title", "Shared memory")
+            content = (parsed or {}).get("content")
+            if content is None:
+                content = markdown
+            body = (f"# 共享记忆编辑待合并：{title}\n\n原因：{reason}\n\n"
+                    f"基础 revision：`{base}`\n当前 revision：`{latest.get('revision', 'unknown')}`\n\n"
+                    "## Obsidian 中保留的修改\n\n" + content + "\n\n"
+                    "## 当前共享版本\n\n" + latest.get("content", "（当前版本不可用）") + "\n")
+            atomic_write(path, body, private=False)
+        return path
+
+    def _publish_conflict_notes(self, vault):
+        folder = Path(vault) / "41-Memory-Notes" / "Shared-Memory-Conflicts"
+        conflicts = self.conflicts()
+        for conflict in conflicts:
+            event = conflict.get("event", {})
+            fact_id = event.get("fact_id", "unknown")
+            event_id = conflict.get("id", "unknown")
+            path = folder / f"{fact_id}--conflict--{event_id}.md"
+            if path.exists():
+                continue
+            folder.mkdir(parents=True, exist_ok=True)
+            current = conflict.get("current_at_conflict") or {}
+            body = (f"# 共享记忆冲突：{event.get('title', 'Shared memory')}\n\n"
+                    f"冲突事件：`{event_id}`；基础 revision：`{event.get('base_revision')}`\n\n"
+                    f"## 当前共享版本（{current.get('revision', 'unknown')}）\n\n{current.get('content', '')}\n\n"
+                    f"## 未应用的修改（Agent {event.get('agent', 'unknown')}）\n\n{event.get('content', '')}\n\n"
+                    "请比较两版后，通过 Agent 调用 `memory_resolve` 提交合并结果。")
+            atomic_write(path, body, private=False)
+        return len(conflicts)
+
     def export(self):
         vault = self.config.get("vault")
         if not vault:
             raise ValueError("Vault not configured")
-        target = Path(vault).resolve() / "40-Agent-Memory" / "Generated"
+        vault = Path(vault).resolve()
+        target = vault / "40-Agent-Memory" / "Generated"
         target.mkdir(parents=True, exist_ok=True)
         with process_lock(self.root / "export.lock"):
             manifest_file = self.root / "export-manifest.json"
@@ -281,59 +413,60 @@ class Client:
             new = dict(manifest)
             preserved = []
             written = 0
+            imported = 0
+            conflicts_saved = 0
             for fact_id, f in facts.items():
                 identifier(fact_id)
+                candidates = [name for name in manifest if _export_fact_id(name) == fact_id]
+                original_name = next((name for name in candidates if (target / name).exists()), None)
+                if original_name is None:
+                    original_name = _export_filename(f.get("title"), fact_id)
+                original_path = target / original_name
+                existing = original_path.read_text(encoding="utf-8") if original_path.exists() else None
+                existing_hash = hashlib.sha256(existing.encode("utf-8")).hexdigest() if existing is not None else None
+                baseline_hash = manifest.get(original_name)
+
+                if existing is not None and existing_hash != baseline_hash:
+                    try:
+                        edit = self._parse_exported_note(existing)
+                        if edit["fact_id"] != fact_id or edit["scope"] != f["scope"]:
+                            raise ValueError("Fact ID or scope was changed")
+                        if edit["certainty"] not in ("candidate", "confirmed"):
+                            raise ValueError("certainty must be candidate or confirmed")
+                    except (ValueError, TypeError) as exc:
+                        draft = self._save_edit_conflict(vault, existing, None, f, f"无法安全解析 Obsidian 修改：{exc}")
+                        preserved.append(str(draft.relative_to(vault)))
+                        conflicts_saved += 1
+                    else:
+                        same_as_current = all(edit[k] == f.get(k) for k in ("title", "content", "certainty"))
+                        if not same_as_current:
+                            base_revision = (f["revision"] if f.get("pending_change") else
+                                             (edit.get("pending_base_revision") if edit.get("pending") else None)
+                                             or edit.get("revision"))
+                            if base_revision != f["revision"]:
+                                draft = self._save_edit_conflict(vault, existing, edit, f,
+                                    "此笔记基于较旧 revision；原修改已保存为待合并草稿。")
+                                preserved.append(str(draft.relative_to(vault)))
+                                conflicts_saved += 1
+                            else:
+                                self.enqueue("update", fact_id=fact_id, base_revision=base_revision,
+                                    title=edit["title"], content=edit["content"], scope=edit["scope"],
+                                    source=edit.get("source") or f.get("source", ""),
+                                    certainty=edit["certainty"], agent="obsidian")
+                                f = self.get(fact_id) or f
+                                facts[fact_id] = f
+                                imported += 1
+
                 filename = _export_filename(f.get("title"), fact_id)
                 path = target / filename
-
-                # Rename an older generated page only if it still matches our manifest.
-                # Keep hand-edited pages and report them instead of deleting user work.
-                for old_name in list(new):
-                    if old_name == filename or _export_fact_id(old_name) != fact_id:
-                        continue
-                    old_path = target / old_name
-                    if not old_path.exists():
-                        new.pop(old_name, None)
-                    elif hashlib.sha256(old_path.read_bytes()).hexdigest() == new[old_name]:
-                        old_path.unlink()
-                        new.pop(old_name, None)
-                    else:
-                        preserved.append(old_name)
-                existing = path.read_text(encoding="utf-8") if path.exists() else None
-                if existing is not None and hashlib.sha256(existing.encode()).hexdigest() != manifest.get(path.name):
-                    preserved.append(path.name)
-                    continue
-                title = " ".join(str(f.get("title") or "Shared memory").split())
-                body = (f"---\nfact_id: {json.dumps(fact_id)}\ntitle: {json.dumps(title)}\n"
-                        f"revision: {json.dumps(f['revision'])}\n"
-                        f"scope: {json.dumps(f['scope'])}\nstatus: {f['status']}\ncertainty: {f['certainty']}\n"
-                        f"pending: {str(f.get('pending', False)).lower()}\n"
-                        f"created_at: {json.dumps(f.get('created_at'))}\n"
-                        f"created_by_agent: {json.dumps(f.get('created_by_agent', 'unknown'))}\n"
-                        f"created_by_device_id: {json.dumps(f.get('created_by_device_id', 'unknown'))}\n"
-                        f"updated_at: {json.dumps(f.get('updated_at'))}\n"
-                        f"updated_by_agent: {json.dumps(f.get('updated_by_agent', f.get('agent', 'unknown')))}\n"
-                        f"updated_by_device_id: {json.dumps(f.get('updated_by_device_id', f.get('device_id', 'unknown')))}\n---\n\n"
-                        "<!-- memory-share generated read-only view; submit changes via shared-memory MCP -->\n"
-                        f"\n# {title}\n\n{f['content']}\n")
-                history = f.get("history", [])
-                if history:
-                    body += "\n## 修改记录\n\n| 时间（UTC） | 操作 | Agent | 设备 | Revision |\n|---|---|---|---|---|\n"
-                    for item in history:
-                        recorded = item.get("recorded_at")
-                        when = (time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(recorded)) + " UTC"
-                                if isinstance(recorded, (int, float)) else "未知（旧版记忆）")
-                        cells = [when, str(item.get("action", "unknown")), str(item.get("agent", "unknown")),
-                                 str(item.get("device_id", "unknown")), str(item.get("revision", "unknown"))]
-                        body += "| " + " | ".join(value.replace("|", "\\|").replace("\n", " ") for value in cells) + " |\n"
-                if f.get("pending_change"):
-                    change = f["pending_change"]
-                    body += (f"\n> 待同步修改：{change.get('action', 'update')}，由 Agent `"
-                             f"{change.get('agent', 'unknown')}`（设备 `{change.get('device_id', 'unknown')}`）提交。"
-                             "服务端确认后会写入正式修改记录。\n")
-                if existing != body:
+                body = self._note_body(f)
+                if existing != body or original_path != path:
                     atomic_write(path, body, private=False)
                     written += 1
+                if original_path != path and original_path.exists():
+                    # The edit has either been queued or copied into a visible conflict draft.
+                    original_path.unlink()
+                    new.pop(original_name, None)
                 new[path.name] = hashlib.sha256(body.encode()).hexdigest()
             # Stale pages are removed only when still byte-identical to our own export.
             for name in list(manifest):
@@ -345,7 +478,10 @@ class Client:
                     elif path.exists():
                         preserved.append(name)
             atomic_write(manifest_file, dumps(new))
-        return {"written": written, "preserved_user_edits": preserved, "directory": str(target)}
+        conflicts_published = self._publish_conflict_notes(vault)
+        return {"written": written, "imported_edits": imported, "conflicts_saved": conflicts_saved,
+                "conflicts_published": conflicts_published, "preserved_user_edits": preserved,
+                "directory": str(target)}
 
     def note_read(self, relative_path):
         vault = Path(self.config["vault"]).resolve()

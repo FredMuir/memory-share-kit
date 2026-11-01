@@ -6,8 +6,8 @@
 
 执行 installers/install-obsidian-unix.sh（已有 Obsidian 保留），再 installers/install-unix.sh DEVICE ABSOLUTE_VAULT。使用独立 venv，私有数据不得进入 iCloud/OneDrive/Vault。不能为了本项目默认安装 Homebrew；有符合版本的 Python 就复用其解释器创建 venv。
 
-让用户在 configure 的隐藏提示输入令牌，不贴到聊天、不读取打印 credential 文件。合并 generated-config，使用绝对 Python 路径，避免 Finder 启动的 PATH 差异。不得覆盖 Codex/Hermes/MiniMax 其他配置。
+在可信 LAN/Tailscale 内以 --no-auth --allow-private-http 配置可达 VPS 地址；无需令牌，不打开公网端口。合并 generated-config，使用绝对 Python 路径，避免 Finder 启动的 PATH 差异。不得覆盖 Codex/Hermes/MiniMax 其他配置。
 
-Obsidian 打开现有 Vault，Remotely Save 排除 40-Agent-Memory；无 UI 操作能力时如实列为待手动设置。检查 plist 后启用 launchd LaunchAgent，验证 launchctl 状态、实际同步和本机测试。先测试本地读写，再测试跨电脑。
+Obsidian 打开现有 Vault；确认 `40-Agent-Memory/Generated/` 纳入 OneDrive 同步，私有 SQLite 与队列在 Vault 外。检查 plist 后启用 launchd LaunchAgent，并按用户要求验证本地读写与跨电脑同步。
 
 不得关闭 Gatekeeper、清空记忆或升级已有 Agent。最终报告实机执行结果，不用 Linux 测试替代 macOS 验收。
