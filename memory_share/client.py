@@ -274,7 +274,7 @@ class Client:
         target.mkdir(parents=True, exist_ok=True)
         with process_lock(self.root / "export.lock"):
             manifest_file = self.root / "export-manifest.json"
-            manifest = json.loads(manifest_file.read_text()) if manifest_file.exists() else {}
+            manifest = json.loads(manifest_file.read_text(encoding="utf-8")) if manifest_file.exists() else {}
             with connect(self.path) as db:
                 db.execute("BEGIN")
                 facts = self._view(db)
