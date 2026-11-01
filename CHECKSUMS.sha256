@@ -1,4 +1,5 @@
 7f8945d96f6424aac9a0539ce1acc5be62a09fafc0298649a1e2b14814ca77e3  .gitignore
+e1bf75eecccf6f49c0b5b457afb36cc037542e730e45ff9f47fe8119810d6a10  AGENTS.md
 684888c0ebb17f374298b65ee2807526c066094c701bcc7ebbe1c1095f494fc1  dist/.gitignore
 e7e59d19eda50b221242d1ab7aea6a690f8d7af2016c765436bb19a044712991  dist/memory_share_kit-0.1.0-py3-none-any.whl
 3f80a72b6b4614f83c79d342e226ec4ae9c7c73cda05e9b7cd7b1153846ba5e3  dist/memory_share_kit-0.1.1-py3-none-any.whl
