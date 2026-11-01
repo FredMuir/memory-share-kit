@@ -12,7 +12,7 @@ import unittest
 import urllib.error
 import urllib.request
 
-from memory_share.client import Client
+from memory_share.client import Client, _export_filename
 from memory_share.cli import init, snippets
 from memory_share.core import Authority, atomic_write, connect, dumps, uid
 from memory_share.server import create_server
@@ -189,7 +189,7 @@ class Integration(unittest.TestCase):
     def test_export_preserves_user_edits_and_no_rewrite(self):
         r = self.store(self.a); self.a.sync()
         result = self.a.export(); self.assertEqual(result["written"], 1)
-        p = Path(result["directory"]) / (r["fact_id"] + ".md")
+        p = Path(result["directory"]) / _export_filename("测试事实", r["fact_id"])
         self.assertTrue(p.read_text().startswith("---\n"))
         stamp = p.stat().st_mtime_ns
         self.assertEqual(self.a.export()["written"], 0)

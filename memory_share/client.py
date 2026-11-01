@@ -5,6 +5,7 @@ import json
 import re
 import sqlite3
 import time
+import unicodedata
 from pathlib import Path
 import urllib.error
 import urllib.parse
@@ -15,6 +16,33 @@ from .core import atomic_write, connect, dumps, identifier, process_lock, scope_
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _export_filename(title, fact_id):
+    """Return a readable Obsidian filename with the stable machine ID retained."""
+    identifier(fact_id)
+    title = " ".join(str(title or "").split())
+    slug = unicodedata.normalize("NFKC", title)
+    slug = re.sub(r"[\s/\\<>:\"|?*#\[\]{}]+", "-", slug)
+    slug = re.sub(r"[^\w.-]+", "-", slug, flags=re.UNICODE)
+    slug = re.sub(r"-+", "-", slug).strip(" .-_")
+    if not slug:
+        slug = "shared-memory"
+    # Keep the full name under common 255-byte filesystem limits, including long IDs.
+    while len(slug.encode("utf-8")) > 170:
+        slug = slug[:-1]
+    slug = slug.rstrip(" .-_") or "shared-memory"
+    return f"{slug}--{fact_id}.md"
+
+
+def _export_fact_id(filename):
+    """Read IDs from both legacy `<id>.md` and readable `<title>--<id>.md` names."""
+    stem = Path(filename).stem
+    candidate = stem.rsplit("--", 1)[-1] if "--" in stem else stem
+    try:
+        return identifier(candidate)
+    except ValueError:
         return None
 
 
@@ -247,23 +275,40 @@ class Client:
             written = 0
             for fact_id, f in facts.items():
                 identifier(fact_id)
-                path = target / (fact_id + ".md")
+                filename = _export_filename(f.get("title"), fact_id)
+                path = target / filename
+
+                # Rename an older generated page only if it still matches our manifest.
+                # Keep hand-edited pages and report them instead of deleting user work.
+                for old_name in list(new):
+                    if old_name == filename or _export_fact_id(old_name) != fact_id:
+                        continue
+                    old_path = target / old_name
+                    if not old_path.exists():
+                        new.pop(old_name, None)
+                    elif hashlib.sha256(old_path.read_bytes()).hexdigest() == new[old_name]:
+                        old_path.unlink()
+                        new.pop(old_name, None)
+                    else:
+                        preserved.append(old_name)
                 existing = path.read_text(encoding="utf-8") if path.exists() else None
                 if existing is not None and hashlib.sha256(existing.encode()).hexdigest() != manifest.get(path.name):
                     preserved.append(path.name)
                     continue
-                body = (f"---\nfact_id: {json.dumps(fact_id)}\nrevision: {json.dumps(f['revision'])}\n"
+                title = " ".join(str(f.get("title") or "Shared memory").split())
+                body = (f"---\nfact_id: {json.dumps(fact_id)}\ntitle: {json.dumps(title)}\n"
+                        f"revision: {json.dumps(f['revision'])}\n"
                         f"scope: {json.dumps(f['scope'])}\nstatus: {f['status']}\ncertainty: {f['certainty']}\n"
                         f"pending: {str(f.get('pending', False)).lower()}\n---\n\n"
-                        "<!-- memory-share generated: edit via MCP; excluded from Remotely Save -->\n"
-                        f"\n# {f['title']}\n\n{f['content']}\n")
+                        "<!-- memory-share generated read-only view; submit changes via shared-memory MCP -->\n"
+                        f"\n# {title}\n\n{f['content']}\n")
                 if existing != body:
                     atomic_write(path, body, private=False)
                     written += 1
                 new[path.name] = hashlib.sha256(body.encode()).hexdigest()
             # Stale pages are removed only when still byte-identical to our own export.
             for name in list(manifest):
-                if name[:-3] not in facts:
+                if _export_fact_id(name) not in facts:
                     path = target / name
                     if path.exists() and hashlib.sha256(path.read_bytes()).hexdigest() == manifest[name]:
                         path.unlink()

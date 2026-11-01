@@ -1,4 +1,4 @@
-# 多电脑 Agent 共享记忆安装包 v0.1.0
+# 多电脑 Agent 共享记忆安装包 v0.1.1
 
 核心：Windows / macOS / Linux 上的 Hermes、Codex、MiniMax Code 等工具，通过**本机 stdio MCP**共用本机 SQLite；后台同步进程把事件提交到 VPS。VPS 故障不影响本机记忆工具。Obsidian 是人可读视图；Noema 是边缘离线辅助。
 
@@ -20,9 +20,10 @@
 ## 从这里开始
 
 1. 阅读 [精确行动指南](docs/01-ACTION-GUIDE.md)，先配置 VPS，再安装一台电脑试运行。
+   若需在局域网部署协调端，按 [局域网部署模板](docs/LAN-DEPLOYMENT.md) 操作，并替换其中的占位符。
 2. 系统安装：[Windows](docs/02-WINDOWS.md)、[macOS](docs/03-MACOS.md)、[Linux 桌面与 VPS](docs/04-LINUX.md)。
 3. 连接 Agent：[Hermes / Codex / MiniMax Code](docs/05-AGENTS.md)。
-4. 配置 [Obsidian、Remotely Save 与 Noema](docs/06-OBSIDIAN-NOEMA.md)。
+4. 配置 [Obsidian OneDrive Sync 与 Noema](docs/06-OBSIDIAN-NOEMA.md)。
 5. 执行 [验收、故障排查与回滚](docs/07-OPERATIONS.md)。
 6. 可复制的 [平台安装提示词](prompts) 和 [Agent 共享记忆规则](prompts/AGENT-COMMON.txt)。
 
@@ -49,7 +50,7 @@
 - `installers/obsidian-assets.json`：Obsidian 1.14.5 官方下载资产与 SHA256。
 - `tools/autostart.py`：生成 Windows 计划任务、macOS launchd、Linux systemd 用户单元。
 - `requirements.lock`：固定本次已验证依赖，包含 Windows 条件依赖。
-- `dist/memory_share_kit-0.1.0-py3-none-any.whl`：三平台通用的本包 Python 安装文件；依赖另从固定清单安装。
+- `dist/memory_share_kit-0.1.1-py3-none-any.whl`：三平台通用的本包 Python 安装文件；依赖另从固定清单安装。
 - `memory_share/`：完整 Python 程序；`tests/`：自动化测试。
 
 Obsidian 安装器从官方 GitHub 下载，未打包重新分发的大体积 EXE/DMG。第一次安装需要网络和 Python 3.11+，建议 3.12。Agent 自身与模型账号不由此安装包安装或收费。

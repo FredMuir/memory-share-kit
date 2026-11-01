@@ -21,7 +21,7 @@ files.sort()
 manifest = root / "CHECKSUMS.sha256"
 manifest.write_text("".join(hashlib.sha256(p.read_bytes()).hexdigest() + "  " + p.relative_to(root).as_posix() + "\n" for p in files), encoding="utf-8", newline="\n")
 files.append(manifest)
-archive = output / "memory-share-kit-v0.1.0.zip"
+archive = output / "memory-share-kit-v0.1.1.zip"
 with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as z:
     for p in files:
         z.write(p, "memory-share-kit/" + p.relative_to(root).as_posix())

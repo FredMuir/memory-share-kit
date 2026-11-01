@@ -1,4 +1,4 @@
-# Obsidian、OneDrive 与 Noema
+# Obsidian OneDrive Sync 与 Noema
 
 ## 1. 每个平台一个同名 Vault
 
@@ -20,22 +20,16 @@
 99-Attachments/
 ```
 
-40 是各电脑从缓存渲染的本地视图；41 是用户可编辑的补充；42 是指定一台电脑发布的离线资料包。
+40 是各电脑从缓存渲染的只读视图；41 是用户可编辑的补充；42 是指定一台电脑发布的离线资料包。Vault 根目录的 `README-共享记忆用法.md` 说明如何检索、审批和修改记忆。
 
-## 2. Remotely Save
+## 2. OneDrive Sync（当前 VPS 与移动端配置）
 
-1. 在 Obsidian 设置 → 社区插件中搜索并安装 **Remotely Save**，核对项目为 `remotely-save/remotely-save`，不要安装名字相近的 fork。
-2. 启用插件，按现有 OneDrive 授权方式连接；不复用 rclone 的配置文件作为插件配置。
-3. 确认个人/企业 OneDrive 类型。免费 App Folder 文档指向个人 OneDrive；若账户类型不匹配，停止并核对当前插件支持，不能假装已授权。
-4. 核对真实 App Folder 与 Remote Base Directory；一般使用同名 Vault。不是随意填写 OneDrive 根目录的 `Obsidian`。
-5. 在忽略/排除路径的设置中排除 `40-Agent-Memory/` 整个子树。若当前设置接受正则，可使用 `^40-Agent-Memory(?:/|$)`；若接受路径，填写实际目录。以插件当前版本格式和同步预览验证，不能只填入后默认生效。
-6. 排除记忆包自己的配置/凭据。私有状态目录本就应在 Vault 外。不要同步 Agent 凭据或用户整个 `.obsidian` 工作区状态。
-7. 第一次只放一条无敏感的测试笔记，设备 A 上传、设备 B 下载，验证方向、目录和删除行为后再同步正式笔记。
-8. 开启当前插件版本提供的启动/定时自动同步。iOS 只在 App 得到执行机会时运行，不保证后台固定频率。
+VPS 的 Memory Share Vault 和移动端使用社区插件 **OneDrive Sync**（插件 ID `onedrive-sync`，作者 Jeff Steinbok）。按插件的个人 Microsoft 账户设备码流程登录，使用 App Folder 根目录；Vault 的本地目录应位于 rclone 挂载目录之外。
 
-源：https://github.com/remotely-save/remotely-save/blob/master/docs/remote_services/onedrive/README.md 。
-
-**不要叠加 OneDrive 桌面客户端或 rclone 双向同步同一 Vault 路径。** 若已有 Vault 直接位于系统 OneDrive 同步目录，先备份并确定唯一同步器，再选择迁至普通本机目录配合 Remotely Save；不能一边运行两套同步一边迁移。
+- 文件改动触发同步；VPS 配置关闭定时轮询、并发上限 2，冲突时创建副本。
+- 保留 `40-Agent-Memory/Generated/`，让记忆阅读视图随 Vault 同步；不要在 Obsidian 里编辑这批生成文件。
+- 不要再对同一 Vault 启用 Remotely Save、OneDrive 桌面客户端或把 Vault 移入 rclone 挂载目录。本机只由 Obsidian 插件写 Vault；rclone 仅把 OneDrive 挂载到另一个目录。
+- 插件说明与高级设置：[JeffSteinbok/obsidian-onedrive](https://github.com/JeffSteinbok/obsidian-onedrive)。个人账户默认使用 App Folder；企业/学校账户需要额外 Entra app 配置。
 
 ## 3. 记忆如何显示和编辑
 
@@ -45,7 +39,9 @@
 PYTHON -m memory_share --state STATE export
 ```
 
-生成文件包含 fact_id、revision、scope、certainty、status、pending。重复导出相同内容不重写，减少版本噪声。直接改过的文件会被保留并在 `preserved_user_edits` 报告；**这些修改不会自动提交主库**。
+生成文件名使用 `<标题短名>--<完整_fact_id>.md`，Markdown 标题使用人类可读的记忆标题；YAML 属性同时保留 `title`、完整 `fact_id`、`revision`、`scope`、`certainty`、`status`、`pending`。文件名便于浏览，完整 ID 便于 Agent 精确定位。修改记忆标题后，导出器会在旧文件仍与导出清单一致时安全重命名；手动改动过的旧文件会保留并报告。重复导出相同内容不重写，减少版本噪声。
+
+生成文件是只读视图。**直接改 Markdown 不会提交主库**。修改前先用 `memory_get` 获取当前 revision，再由 Agent 调用 `memory_update`；新增用 `memory_store`，撤销用 `memory_retract`。`certainty=candidate` 表示待核实，用户确认或有可复核证据后才设为 `confirmed`；`pending` 指客户端事件尚未获得服务端确认，不代表用户审批状态。同步后导出视图会更新。
 
 应在 41-Memory-Notes 写补充，或让电脑 Agent 使用 memory_update；要修改已有共享事实，先 memory_get 获取 revision。尚不开发 Obsidian 插件。
 
