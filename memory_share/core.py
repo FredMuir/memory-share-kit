@@ -154,6 +154,14 @@ class Authority:
             """)
             db.execute("INSERT OR IGNORE INTO meta VALUES('epoch', ?)", (uid(),))
             self._backfill_audit(db)
+            published = db.execute("SELECT value FROM meta WHERE key='audit_history_published'").fetchone()
+            if not published:
+                # Existing clients sync by cursor; publish reconstructed records so their
+                # caches and generated Obsidian views receive the metadata without reset.
+                for row in db.execute("SELECT data FROM facts"):
+                    db.execute("INSERT INTO changes(data) VALUES(?)",
+                               (dumps({"fact": json.loads(row[0]), "resolved": None}),))
+                db.execute("INSERT INTO meta VALUES('audit_history_published','1')")
 
     @staticmethod
     def _backfill_audit(db):

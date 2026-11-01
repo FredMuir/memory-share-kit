@@ -21,7 +21,7 @@ if ($LASTEXITCODE -ne 0) { throw 'venv failed' }
 $Python = Join-Path $Venv 'Scripts\python.exe'
 & $Python -m pip install -r (Join-Path $KitDir 'requirements.lock')
 if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed' }
-& $Python -m pip install --no-deps (Join-Path $KitDir 'dist\memory_share_kit-0.1.3-py3-none-any.whl')
+& $Python -m pip install --no-deps (Join-Path $KitDir 'dist\memory_share_kit-0.1.4-py3-none-any.whl')
 if ($LASTEXITCODE -ne 0) { throw 'Package installation failed' }
 if (-not (Test-Path (Join-Path $InstallRoot 'client.json'))) {
     & $Python -m memory_share --state $InstallRoot init --device $Device --vault $Vault
