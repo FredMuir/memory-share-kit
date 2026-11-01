@@ -1,0 +1,13 @@
+请在当前 Linux 环境部署并验证 Memory Share Kit。先读 README.md、docs/04-LINUX.md、docs/05-AGENTS.md、docs/07-OPERATIONS.md。
+
+先确认角色：Linux 桌面客户端，还是 VPS 协调端，或二者都需安装。桌面才安装 Obsidian GUI；无图形 VPS 不为此加桌面、Xvfb 或关闭沙箱。不要改现有网络安排。
+
+盘点发行版、CPU、Python版本、运行用户、现有 Hermes服务与 HERMES_HOME、Vault和其他Agent。备份相关配置。设备ID、服务地址、Vault缺失时问必要参数，同时继续只读检查。
+
+客户端使用 installers/install-unix.sh，协调端使用 install-server-linux.sh，二者独立状态目录。不要进入 Hermes venv 安装依赖，不升级 Hermes，不复制其运行时数据库。脚本默认安装不启用服务；检查生成的 systemd 用户单元后启用。服务器若需要开机无人登录恢复，按指南确认 linger 或既有服务管理方式。
+
+只用一设备一令牌；不要输出到聊天或日志。客户端隐藏输入，合并 MCP 片段。共享层先用真实 HTTP 和 stdio 验收，不能把 REST 路径当 MCP。
+
+执行自动化测试和停服/恢复测试。rclone 只有在确认真实 remote 后才执行 backup-upload；必须远端 SHA256 验证通过才报告备份成功。保留本地备份，未授权时不修改或删除 OneDrive 内容。
+
+这是用户在目标主机执行安装的任务提示。若当前只是其他工作区而不是目标 VPS，不要谎称已部署；先交付可审阅文件。最终提供改动路径、服务状态、测试结果、未完成项和回滚方法。

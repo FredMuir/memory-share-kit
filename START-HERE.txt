@@ -1,0 +1,17 @@
+Memory Share Kit 0.1.0
+
+1. 把整个压缩包解压到普通本机目录。不要只取某个安装脚本。
+2. 需要 Python 3.11+，建议 3.12。运行：python tools/verify_bundle.py
+3. 打开 README.md 和 docs/01-ACTION-GUIDE.md。
+4. VPS：docs/04-LINUX.md 的协调端章节；先独立目录安装并发放设备令牌。
+5. Windows：docs/02-WINDOWS.md；macOS：03-MACOS.md；Linux 桌面：04-LINUX.md。
+6. 电脑上的 Agent 可使用 prompts/INSTALL-对应平台.txt 执行本机安装；不要发给错误主机。
+7. 接入 Hermes/Codex/MiniMax Code：docs/05-AGENTS.md；运行规则在 prompts/。
+8. Obsidian/OneDrive/Noema：docs/06-OBSIDIAN-NOEMA.md。
+9. 验收/恢复/回滚：docs/07-OPERATIONS.md。
+
+必须填写的实际信息：设备ID、Vault路径、已有服务地址；设备令牌在本机 configure 隐藏输入，不贴到聊天。
+私有 SQLite 和令牌留在 Vault/OneDrive 之外。Remotely Save 排除 40-Agent-Memory/。
+
+交付时已完成 Linux 代码与安装测试；Windows/macOS、实际OneDrive、Noema真机仍需目标环境验收。
+未连接或修改你的生产 VPS，也未声称远程电脑已经安装。

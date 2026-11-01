@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+.venv/
+downloads/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+client.json

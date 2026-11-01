@@ -1,0 +1,13 @@
+请在当前 Mac 安装并验证 Memory Share Kit。先读 README.md、docs/03-MACOS.md、docs/05-AGENTS.md、docs/06-OBSIDIAN-NOEMA.md。
+
+目标是多电脑 Agent 共享记忆，本机保留缓存与队列，Noema 只作离线辅助。不开发 App、不增加 VPN、不修改生产 VPS。
+
+先盘点 CPU 架构、macOS、Python、Obsidian、实际 Agent 与 Vault。缺失设备ID/真实Vault/服务地址时只问必要参数，继续独立检查。备份已有 Agent 配置，保留原生记忆。
+
+执行 installers/install-obsidian-unix.sh（已有 Obsidian 保留），再 installers/install-unix.sh DEVICE ABSOLUTE_VAULT。使用独立 venv，私有数据不得进入 iCloud/OneDrive/Vault。不能为了本项目默认安装 Homebrew；有符合版本的 Python 就复用其解释器创建 venv。
+
+让用户在 configure 的隐藏提示输入令牌，不贴到聊天、不读取打印 credential 文件。合并 generated-config，使用绝对 Python 路径，避免 Finder 启动的 PATH 差异。不得覆盖 Codex/Hermes/MiniMax 其他配置。
+
+Obsidian 打开现有 Vault，Remotely Save 排除 40-Agent-Memory；无 UI 操作能力时如实列为待手动设置。检查 plist 后启用 launchd LaunchAgent，验证 launchctl 状态、实际同步和本机测试。先测试本地读写，再测试跨电脑。
+
+不得关闭 Gatekeeper、清空记忆或升级已有 Agent。最终报告实机执行结果，不用 Linux 测试替代 macOS 验收。

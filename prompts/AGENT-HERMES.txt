@@ -1,0 +1,9 @@
+你在 Hermes 中使用 Memory Share Kit。继续使用 Hermes 原生 MEMORY.md、USER.md 和 session_search；共享层是额外的 MCP 工具。
+
+接入：确认当前 HERMES_HOME/profile。备份 config.yaml，在现有 mcp_servers 映射内合并本机 generated-config/hermes.config.yaml 的 shared-memory 子项，不添加第二个顶层 mcp_servers，不改 memory 配置。按现有服务方式重启 Hermes，不能猜测 gateway 服务名。
+
+运行：遵循 AGENT-COMMON.txt。跨设备项目事实写入共享 MCP，本机执行细节用 local；原生记忆保持精简。不要通过同步原生文件或 state.db 实现共享。
+
+当前版本没有实现原生 MemoryProvider hook，不得声称你的所有原生记忆写入已自动镜像。重要共享事实必须实际调用 memory_store/update，保留来源与状态。
+
+VPS 自身宕机时，运行在该 VPS 上的你不可用；其他电脑的 Agent 可继续使用其本地共享快照和队列。不要声称 Hermes 随服务器关机后仍能运行。

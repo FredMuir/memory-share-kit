@@ -1,0 +1,52 @@
+Memory Share Kit v0.1.0 — validation record
+Date: 2026-10-31
+Environment: Linux, CPython 3.12, MCP SDK 1.30.0
+
+Executed:
+- 22 integration tests below; real localhost HTTP, SQLite transactions and MCP stdio.
+- Actual socket closed after server commit, followed by idempotent retry.
+- Linux installer executed from final supplied wheel into a fresh isolated venv.
+- Install and Vault paths include spaces and Chinese characters.
+- Installed wheel (outside source checkout) stored, searched and exported an offline fact.
+- pip check: no broken requirements.
+- bash -n: all shell installers pass.
+- JSON/TOML config parsing, launchd plist round-trip, wheel/source byte equality pass.
+
+Not executed:
+- Windows/macOS native installers, Task Scheduler/launchd runtime.
+- Obsidian official GUI installer execution.
+- Production VPS, existing Hermes/Codex/MiniMax host integrations.
+- Real OneDrive remote upload/restore, Noema on physical devices.
+- systemd user runtime start: this sandbox lacks a user manager. Static checks do not prove startup.
+
+Test output:
+test_actual_socket_disconnect_after_commit (test_memory.Integration.test_actual_socket_disconnect_after_commit) ... ok
+test_auth_device_spoof_and_id_reuse (test_memory.Integration.test_auth_device_spoof_and_id_reuse) ... ok
+test_backup_restore_epoch_replays_acknowledged_writes (test_memory.Integration.test_backup_restore_epoch_replays_acknowledged_writes) ... ok
+test_chained_offline_edits (test_memory.Integration.test_chained_offline_edits) ... ok
+test_concurrent_update_and_explicit_resolution (test_memory.Integration.test_concurrent_update_and_explicit_resolution) ... ok
+test_config_snippets_parse_and_have_no_token (test_memory.Integration.test_config_snippets_parse_and_have_no_token) ... ok
+test_export_preserves_user_edits_and_no_rewrite (test_memory.Integration.test_export_preserves_user_edits_and_no_rewrite) ... ok
+test_init_does_not_replace_identity_or_queue (test_memory.Integration.test_init_does_not_replace_identity_or_queue) ... ok
+test_interrupted_pull_rolls_back_cursor_and_facts_together (test_memory.Integration.test_interrupted_pull_rolls_back_cursor_and_facts_together) ... ok
+test_local_backup_upload_reports_no_remote_verification (test_memory.Integration.test_local_backup_upload_reports_no_remote_verification) ... ok
+test_local_scope_concurrent_stale_edit_is_explicit_error (test_memory.Integration.test_local_scope_concurrent_stale_edit_is_explicit_error) ... ok
+test_local_scope_never_uploaded (test_memory.Integration.test_local_scope_never_uploaded) ... ok
+test_note_allowlist_blocks_traversal_and_symlink (test_memory.Integration.test_note_allowlist_blocks_traversal_and_symlink) ... ok
+test_offline_http_failure_then_real_reconnect (test_memory.Integration.test_offline_http_failure_then_real_reconnect) ... ok
+test_offline_save_survives_real_process_exit (test_memory.Integration.test_offline_save_survives_real_process_exit) ... ok
+test_old_receipt_cannot_override_newer_retraction (test_memory.Integration.test_old_receipt_cannot_override_newer_retraction) ... ok
+test_real_mcp_stdio_offline_read_and_write (test_memory.Integration.test_real_mcp_stdio_offline_read_and_write) ... Processing request of type ListToolsRequest
+Processing request of type CallToolRequest
+Processing request of type CallToolRequest
+ok
+test_receipt_keeps_local_write_readable_if_pull_fails (test_memory.Integration.test_receipt_keeps_local_write_readable_if_pull_fails) ... ok
+test_response_lost_after_server_commit (test_memory.Integration.test_response_lost_after_server_commit) ... ok
+test_retraction_not_resurrected_by_stale_edit (test_memory.Integration.test_retraction_not_resurrected_by_stale_edit) ... ok
+test_same_event_replayed_100_times (test_memory.Integration.test_same_event_replayed_100_times) ... ok
+test_same_key_same_value_from_two_devices (test_memory.Integration.test_same_key_same_value_from_two_devices) ... ok
+
+----------------------------------------------------------------------
+Ran 22 tests in 12.635s
+
+OK
